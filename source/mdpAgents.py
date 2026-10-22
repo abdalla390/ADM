@@ -53,11 +53,26 @@ class MDPAgent(Agent):
     def final(self, state):
         print("Looks like the game just ended!")
 
+    def move_In_squares(self, state) -> str:
+        position = api.whereAmI(state)
+
+        if position[0] > 6 and position[0] <= 13 and position[1] == 1:
+            return 'West'
+        elif position[1] >= 1 and position[1] < 9 and position[0] == 6:
+            return 'North'
+        elif position[1] == 9 and position[0] >= 6 and position[0] < 13:
+            return 'East'
+        elif position[0] == 13 and position[1] <= 9 and position[1] > 1:
+            return 'South'
+
+        return 'Stop'
+        
     # For now I just move randomly
     def getAction(self, state):
         # Get the actions we can try, and remove "STOP" if that is one of them.
         legal = api.legalActions(state)
         if Directions.STOP in legal:
             legal.remove(Directions.STOP)
-        # Random choice between the legal options.
-        return api.makeMove(random.choice(legal), legal)
+        return api.makeMove(self.move_In_squares(state), legal)
+
+
