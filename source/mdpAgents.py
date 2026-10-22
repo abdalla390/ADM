@@ -53,8 +53,28 @@ class MDPAgent(Agent):
     def final(self, state):
         print("Looks like the game just ended!")
 
-    def move_In_squares(self, state) -> str:
+    def possible_states(state):
+        corners = api.corners(state)
+        walls = []
+        
+        height = corners[3][1]
+        width = corners[3][0]
+        
+        possible = []
+
+        for i in range(1, width):
+            for j in range(1, height):
+                if (i, j) not in  walls:
+                    possible.append((i,j))
+
+        return possible 
+
+
+    def move_In_squares(state) -> str:
         position = api.whereAmI(state)
+
+        if random.random() < 0.01:
+            print(MDPAgent.possible_states(state))
 
         if position[0] > 6 and position[0] <= 13 and position[1] == 1:
             return 'West'
@@ -73,6 +93,6 @@ class MDPAgent(Agent):
         legal = api.legalActions(state)
         if Directions.STOP in legal:
             legal.remove(Directions.STOP)
-        return api.makeMove(self.move_In_squares(state), legal)
+        return api.makeMove(MDPAgent.move_In_squares(state), legal)
 
 
