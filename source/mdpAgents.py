@@ -41,6 +41,7 @@ class MDPAgent(Agent):
     def __init__(self):
         print("Starting up MDPAgent!")
         name = "Pacman"
+        self.actions = ['North', 'West', 'South', 'East']
 
     # Gets run after an MDPAgent object is created and once there is
     # game state to access.
@@ -68,8 +69,10 @@ class MDPAgent(Agent):
                     possible.append((i,j))
 
         return possible 
-
-
+    def transition_fn(state, action) -> float:
+        if state:
+            pass
+        return 0.0
     def move_In_squares(state) -> str:
         position = api.whereAmI(state)
 
