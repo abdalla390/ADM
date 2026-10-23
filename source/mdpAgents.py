@@ -42,6 +42,7 @@ class MDPAgent(Agent):
         print("Starting up MDPAgent!")
         name = "Pacman"
         self.actions = ['North', 'West', 'South', 'East']
+        self.states = [] # The call to populate in getAction(...)
 
     # Gets run after an MDPAgent object is created and once there is
     # game state to access.
@@ -69,15 +70,39 @@ class MDPAgent(Agent):
                     possible.append((i,j))
 
         return possible 
-    def transition_fn(state, action) -> float:
-        if state:
-            pass
-        return 0.0
-    def move_In_squares(state) -> str:
+    def transition_fn(self, query_state, state, action) -> float:
+        if not MDPAgent._neighbour_check(query_state, state) or not query_state in self.states:
+            return 0.0
+        
+        delta = MDPAgent._action_conversion_value(action)
+        target_state = (state[0] + delta[0], state[1] + delta[1])
+
+        if query_state == target_state and target_state in self.states:
+            return 0.8 #TODO: use deterministic constant instead of 0.8 incase it changes
+        
+        return 0.2 
+
+    def _action_conversion_value(action) -> tuple:
+        if action == 'East':
+            return (1,0)
+        elif action == 'West':
+            return (-1, 0)
+        elif action == 'South':
+            return (0, -1)
+        elif action == 'North':
+            return (0, 1)
+        else:
+            raise ValueError('Action not present in MDP action set')
+
+    def _neighbour_check(curr, next) -> bool:
+         return abs(curr[0] - next[0]) + abs(curr[1] - next[1]) == 1
+
+
+    def move_In_squares(self, state) -> str:
         position = api.whereAmI(state)
 
-        if random.random() < 0.01:
-            print(MDPAgent.possible_states(state))
+        if random.random() < 0.0001:
+            print(f'I am in {position}, probability to get to state is: ' + str(self.transition_fn((5,4), position, 'North')))
 
         if position[0] > 6 and position[0] <= 13 and position[1] == 1:
             return 'West'
@@ -92,10 +117,13 @@ class MDPAgent(Agent):
         
     # For now I just move randomly
     def getAction(self, state):
+        if self.states == []:
+            self.states = MDPAgent.possible_states(state)
+        
         # Get the actions we can try, and remove "STOP" if that is one of them.
         legal = api.legalActions(state)
         if Directions.STOP in legal:
             legal.remove(Directions.STOP)
-        return api.makeMove(MDPAgent.move_In_squares(state), legal)
+        return api.makeMove(self.move_In_squares(state), legal)
 
 
