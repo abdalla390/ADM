@@ -53,7 +53,8 @@ class MDPAgent(Agent):
         
     # This is what gets run in between multiple games
     def final(self, state):
-        print("Looks like the game just ended!")
+        print("Looks like the game just ended!")\
+        
     @staticmethod
     def possible_states(state):
         corners = api.corners(state)
@@ -119,7 +120,7 @@ class MDPAgent(Agent):
         return 'Stop'
 
     @staticmethod
-    def dist_reward(square, ghost) -> float:
+    def _dist_reward(square, ghost) -> float:
         dist = abs(square[0] - ghost[0]) + abs(square[1] - ghost[1])
 
         return -10 / (dist)
@@ -133,10 +134,21 @@ class MDPAgent(Agent):
             reward += 10
     
         for ghost in ghosts:
-            reward += MDPAgent.dist_reward(square, ghost)
+            reward += MDPAgent._dist_reward(square, ghost)
         return reward
 
-
+    def value_iteration(self, rewards, gamma, iterations) -> dict:
+        V = {state: 0.0 for state in self.states}
+        for _ in range(iterations):
+            new_V = {}
+            for state in self.states:
+                best = max(
+                    sum(self.transition_fn(sprime, state, a) * V[sprime] for sprime in self.states)
+                    for a in self.actions
+                )
+                new_V[state] = rewards[state] + gamma * best
+            V = new_V
+        return V
 
         
     # For now I just move randomly
