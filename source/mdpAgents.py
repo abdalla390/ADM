@@ -54,7 +54,7 @@ class MDPAgent(Agent):
     # This is what gets run in between multiple games
     def final(self, state):
         print("Looks like the game just ended!")
-
+    @staticmethod
     def possible_states(state):
         corners = api.corners(state)
         walls = []
@@ -70,6 +70,7 @@ class MDPAgent(Agent):
                     possible.append((i,j))
 
         return possible 
+
     def transition_fn(self, query_state, state, action) -> float:
         if not MDPAgent._neighbour_check(query_state, state) or not query_state in self.states:
             return 0.0
@@ -82,6 +83,7 @@ class MDPAgent(Agent):
         
         return 0.2 
 
+    @staticmethod
     def _action_conversion_value(action) -> tuple:
         if action == 'East':
             return (1,0)
@@ -94,6 +96,7 @@ class MDPAgent(Agent):
         else:
             raise ValueError('Action not present in MDP action set')
 
+    @staticmethod
     def _neighbour_check(curr, next) -> bool:
          return abs(curr[0] - next[0]) + abs(curr[1] - next[1]) == 1
 
@@ -114,6 +117,27 @@ class MDPAgent(Agent):
             return 'South'
 
         return 'Stop'
+
+    @staticmethod
+    def dist_reward(square, ghost) -> float:
+        dist = abs(square[0] - ghost[0]) + abs(square[1] - ghost[1])
+
+        return -10 / (dist)
+
+    def reward_fn(self, square, food, ghosts, capsule) -> float:
+        reward = -0.04
+        
+        if square in food:
+            reward += 5
+        if square in capsule:
+            reward += 10
+    
+        for ghost in ghosts:
+            reward += MDPAgent.dist_reward(square, ghost)
+        return reward
+
+
+
         
     # For now I just move randomly
     def getAction(self, state):
@@ -124,6 +148,6 @@ class MDPAgent(Agent):
         legal = api.legalActions(state)
         if Directions.STOP in legal:
             legal.remove(Directions.STOP)
-        return api.makeMove(self.move_In_squares(state), legal)
+        api.makeMove(self.move_In_squares(state), legal)
 
 
