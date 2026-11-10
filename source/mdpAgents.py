@@ -48,6 +48,8 @@ class MDPAgent(Agent):
     # game state to access.
     def registerInitialState(self, state):
         print("Running registerInitialState for MDPAgent!")
+        self.states = MDPAgent.possible_states(state)
+
         print("I'm at:")
         print(api.whereAmI(state))
         
@@ -58,7 +60,7 @@ class MDPAgent(Agent):
     @staticmethod
     def possible_states(state):
         corners = api.corners(state)
-        walls = []
+        walls = set(api.walls(state))
         
         height = corners[3][1]
         width = corners[3][0]
@@ -122,7 +124,8 @@ class MDPAgent(Agent):
     @staticmethod
     def _dist_reward(square, ghost) -> float:
         dist = abs(square[0] - ghost[0]) + abs(square[1] - ghost[1])
-
+        if dist == 0:
+            return -10 ** 4
         return -10 / (dist)
 
     def reward_fn(self, square, food, ghosts, capsule) -> float:
@@ -150,16 +153,30 @@ class MDPAgent(Agent):
             V = new_V
         return V
 
-        
+    def best_action(self, pacman_pos, V):
+        return max(self.actions,
+               key=lambda a: sum(self.transition_fn(s2, pacman_pos, a) * V[s2]
+                                 for s2 in self.states))
+
+
+    def near_states(self, pacman_pos):
+        near = []
+        for state in self.states:
+            if self._neighbour_check(state, pacman_pos):
+                near.append(state)
+        return near
     # For now I just move randomly
     def getAction(self, state):
-        if self.states == []:
-            self.states = MDPAgent.possible_states(state)
-        
-        # Get the actions we can try, and remove "STOP" if that is one of them.
+        # Runs every move: rebuild rewards from the current world, re-solve, act
+        food = set(api.food(state))
+        capsules = set(api.capsules(state))
+        ghosts = api.ghosts(state)
+        rewards = {s: self.reward_fn(s, food, ghosts, capsules) for s in self.states}
+
+        V = self.value_iteration(rewards, gamma=0.9, iterations=30)
+        action = self.best_action(api.whereAmI(state), V)
+
         legal = api.legalActions(state)
-        if Directions.STOP in legal:
-            legal.remove(Directions.STOP)
-        api.makeMove(self.move_In_squares(state), legal)
+        return api.makeMove(action, legal)
 
 
