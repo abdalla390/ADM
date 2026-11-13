@@ -74,18 +74,23 @@ class MDPAgent(Agent):
 
         return possible 
 
-    def transition_fn(self, query_state, state, action) -> float:
-        if not MDPAgent._neighbour_check(query_state, state) or not query_state in self.states:
-            return 0.0
-        
-        delta = MDPAgent._action_conversion_value(action)
-        target_state = (state[0] + delta[0], state[1] + delta[1])
+    def transition_fn(self, query_state, pacman_pos, action) -> float:
+        p = api.directionProb
+        side = (1 - p) / 2
+        dx, dy = MDPAgent._action_conversion_value(action)
 
-        if query_state == target_state and target_state in self.states:
-            return 0.8 #TODO: use deterministic constant instead of 0.8 incase it changes
-        
-        return 0.2 
+        direction = [((dx, dy), p), ((dy, dx), side), ((-dy, -dx), side)]
 
+        prob = 0.0
+        for (mx, my), pr in direction:
+            target = (pacman_pos[0] + mx, pacman_pos[1] + my)
+
+            if target not in self.states:
+                target = pacman_pos
+            if target == query_state:
+                prob += pr
+        return prob
+    
     @staticmethod
     def _action_conversion_value(action) -> tuple:
         if action == 'East':
@@ -129,15 +134,21 @@ class MDPAgent(Agent):
         return -10 / (dist)
 
     def reward_fn(self, square, food, ghosts, capsule) -> float:
-        reward = -0.04
+        reward = 0
         
         if square in food:
             reward += 5
         if square in capsule:
             reward += 10
-    
+
+        for pellet in food:
+            reward -= 0.5 * MDPAgent._dist_reward(square, pellet) 
+
         for ghost in ghosts:
-            reward += MDPAgent._dist_reward(square, ghost)
+            if ghost[1] == 0:
+                reward += MDPAgent._dist_reward(square, ghost[0])
+            else:
+                reward -= MDPAgent._dist_reward(square, ghost[0])
         return reward
 
     def value_iteration(self, rewards, gamma, iterations) -> dict:
@@ -154,23 +165,24 @@ class MDPAgent(Agent):
         return V
 
     def best_action(self, pacman_pos, V):
+        near = self._near_states(pacman_pos)
         return max(self.actions,
                key=lambda a: sum(self.transition_fn(s2, pacman_pos, a) * V[s2]
-                                 for s2 in self.states))
+                                 for s2 in near))
 
 
-    def near_states(self, pacman_pos):
+    def _near_states(self, pacman_pos):
         near = []
         for state in self.states:
             if self._neighbour_check(state, pacman_pos):
                 near.append(state)
         return near
-    # For now I just move randomly
-    def getAction(self, state):
+    
+    def getAction(self, state): # type: ignore
         # Runs every move: rebuild rewards from the current world, re-solve, act
         food = set(api.food(state))
         capsules = set(api.capsules(state))
-        ghosts = api.ghosts(state)
+        ghosts = api.ghostStates(state)
         rewards = {s: self.reward_fn(s, food, ghosts, capsules) for s in self.states}
 
         V = self.value_iteration(rewards, gamma=0.9, iterations=30)
